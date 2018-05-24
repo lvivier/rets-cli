@@ -1,0 +1,22 @@
+{
+  "name": "rets-cli",
+  "version": "1.0.0",
+  "description": "Command line RETS client.",
+  "author": "Luke Vivier <luke@vivier.ca>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lvivier/rets-cli.git"
+  },
+  "license": "MIT",
+  "bin": {
+    "rets": "rets.js"
+  },
+  "dependencies": {
+    "commander": "^2.15.1",
+    "csv-write-stream": "^2.0.0",
+    "debug": "^3.1.0",
+    "readline-sync": "^1.4.7",
+    "rets.js": "0.0.7",
+    "streaming-json-stringify": "^3.1.0"
+  }
+}
