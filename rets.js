@@ -1,11 +1,25 @@
 #!/usr/bin/env node
 
 const {version} = require('./package.json')
+const {parse} = require('url')
 const app = require('commander')
 const debug = require('debug')('rets-cli')
 const csv = require('csv-write-stream')
 const json = require('streaming-json-stringify')
 const RETS = require('rets.js')
+const RETSError = require('rets.js/lib/error')
+
+function parseURL (string) {
+  // workaround for an obscure url.parse bug
+  try {
+    let [, auth] = /(?:http|https):\/\/(.+:.*)@/.exec(string)
+    let url = parse(string.replace(auth + '@', ''))
+    url.auth = auth
+    return url
+  } catch (e) {
+    return parse(string)
+  }
+}
 
 function assert (opt) {
   console.error(`\nMissing: ${opt}\n`)
@@ -69,13 +83,25 @@ if (app.dryRun) {
   process.exit(0)
 }
 
-const rets = new RETS({url: app.url})
+function onerror (err) {
+  if (err instanceof RETSError) {
+    console.error(err.message)
+    process.exit(1)
+  } else {
+    throw err
+  }
+}
+
+const rets = new RETS({url: parseURL(app.url)})
 
 rets.on('login', (err) => {
-  if (err) throw err
+  if (err) onerror(err)
   const res = rets.search(Object.assign(query, {objectMode: true, format: 'objects'}))
-  res.parser.on('error', e => { throw e })
-  res.on('error', e => { throw e })
+  // TODO suppress TypeError
+  // TypeError: Cannot read property 'replace' of undefined
+  // TODO suppress "nothing found" error
+  res.parser.on('error', onerror)
+  res.on('error', onerror)
   res.on('finish', () => {
     debug(`got ${res.count} rows`)
     rets.logout()
