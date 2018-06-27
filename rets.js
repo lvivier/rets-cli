@@ -48,6 +48,9 @@ function formatter (format) {
 app
   .version(version)
   .option('--url <url>', 'RETS login URL')
+  .option('--ua-name <name>', 'RETS User Agent name')
+  .option('--ua-password <password>', 'RETS User Agent password')
+  .option('--rets-version <ver>', 'RETS version', 'RETS/1.7.2')
   .option('-r, --search-type <resource>', 'SearchType')
   .option('-c, --class <class>', 'Class')
   .option('-q, --query <query>', 'DMQL Query')
@@ -92,7 +95,10 @@ function onerror (err) {
   }
 }
 
-const rets = new RETS({url: parseURL(app.url)})
+const opts = {url: parseURL(app.url), version: app.retsVersion}
+if (app.uaName) opts.ua = {name: app.uaName, pass: app.uaPassword}
+
+const rets = new RETS(opts)
 
 rets.on('login', (err) => {
   if (err) onerror(err)
