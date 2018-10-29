@@ -75,6 +75,7 @@ let query = {
   Format: 'COMPACT-DECODED',
   StandardNames: 0
 }
+
 if (app.limit) query.Limit = app.limit
 if (app.offset) query.Offset = app.offset
 if (app.select) query.Select = app.select
@@ -86,7 +87,15 @@ if (app.dryRun) {
   process.exit(0)
 }
 
-function onerror (err) {
+const opts = {
+  url: parseURL(app.url),
+  version: app.retsVersion
+}
+if (app.uaName) opts.ua = {name: app.uaName, pass: app.uaPassword}
+
+const rets = new RETS(opts)
+
+function onError (err) {
   if (err instanceof RETSError) {
     console.error(err.message)
     process.exit(1)
@@ -95,25 +104,30 @@ function onerror (err) {
   }
 }
 
-const opts = {url: parseURL(app.url), version: app.retsVersion}
-if (app.uaName) opts.ua = {name: app.uaName, pass: app.uaPassword}
+function onLogin (err) {
+  if (err) onError(err)
 
-const rets = new RETS(opts)
-
-rets.on('login', (err) => {
-  if (err) onerror(err)
   const res = rets.search(Object.assign(query, {objectMode: true, format: 'objects'}))
   // TODO suppress TypeError
   // TypeError: Cannot read property 'replace' of undefined
   // TODO suppress "nothing found" error
-  res.parser.on('error', onerror)
-  res.on('error', onerror)
+  res.parser.on('error', onError)
+  res.on('error', onError)
   res.on('finish', () => {
     debug(`got ${res.count} rows`)
     rets.logout()
   })
 
   res.pipe(app.formatter).pipe(process.stdout)
-})
+}
 
-rets.login()
+function settingToCapability (key, value) {
+  if (['Login', 'Logout', 'Search', 'GetMetadata'].includes(key)) {
+    this.session.capabilities[key] = value
+  }
+}
+
+rets
+  .on('login', onLogin)
+  .login()
+  .on('setting', settingToCapability.bind(rets))
